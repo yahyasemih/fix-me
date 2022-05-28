@@ -10,13 +10,14 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.InvalidParameterException;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Router implements Closeable {
     private final ServerSocketChannel brokersChannel;
     private final ServerSocketChannel marketsChannel;
     private final Selector selector;
     private static int ID = 99999;
-    private boolean isRunning;
+    private final AtomicBoolean isRunning;
 
     public Router(int brokersPort, int marketsPort) throws Exception {
         if (brokersPort == marketsPort) {
@@ -31,11 +32,11 @@ public class Router implements Closeable {
         marketsChannel.configureBlocking(false);
         marketsChannel.bind(new InetSocketAddress(marketsPort));
         marketsChannel.register(selector, SelectionKey.OP_ACCEPT);
-        setRunning(true);
+        isRunning = new AtomicBoolean(true);
     }
 
     public void start() throws Exception {
-        while (isRunning) {
+        while (isRunning.get()) {
             int selected = selector.select(100);
             if (selected == 0) {
                 continue;
@@ -71,11 +72,10 @@ public class Router implements Closeable {
                 }
             }
         }
-        System.out.println("\rClosing server...");
     }
 
     public void setRunning(boolean running) {
-        isRunning = running;
+        isRunning.set(running);
     }
 
     @Override
