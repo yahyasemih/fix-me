@@ -42,7 +42,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>ma.leet.fixme.Main</mainClass>
+                            <mainClass>ma.leet.fixme.router.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
