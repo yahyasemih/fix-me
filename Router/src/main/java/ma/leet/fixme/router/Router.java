@@ -22,11 +22,11 @@ import java.util.logging.Logger;
 public class Router implements Closeable {
   private static final AtomicInteger ID = new AtomicInteger(99999);
   private static final LogManager logManager = LogManager.getLogManager();
-  private final static Logger logger = Logger.getLogger("router");
+  private final static Logger logger = Logger.getLogger("ma/leet/fixme/router");
 
   static {
     try {
-      logManager.readConfiguration(new FileInputStream("../logger.properties"));
+      logManager.readConfiguration(new FileInputStream("logger.properties"));
     } catch (IOException exception) {
       logger.log(Level.SEVERE, "Cannot read configuration file", exception);
     }
