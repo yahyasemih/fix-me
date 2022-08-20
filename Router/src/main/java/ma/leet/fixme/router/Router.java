@@ -10,9 +10,13 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.InvalidParameterException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -40,6 +44,7 @@ public class Router implements Closeable {
   private final List<SocketChannel> markets;
   private final int brokersPort;
   private final int marketsPort;
+  private final ExecutorService executorService;
 
   public Router(int brokersPort, int marketsPort) throws Exception {
     if (brokersPort == marketsPort) {
@@ -59,6 +64,7 @@ public class Router implements Closeable {
     isRunning = new AtomicBoolean(true);
     brokers = new ArrayList<>();
     markets = new ArrayList<>();
+    executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
   }
 
   public void start() throws Exception {
@@ -75,8 +81,6 @@ public class Router implements Closeable {
           logger.info("closed connection");
         } else if (key.isAcceptable()) {
           acceptConnection(key);
-        } else if (key.isWritable()) {
-          logger.info("Writing...");
         } else if (key.isReadable()) {
           receiveMessage(key);
         }
@@ -84,23 +88,28 @@ public class Router implements Closeable {
     }
   }
 
-  private void receiveMessage(SelectionKey key) throws Exception {
+  private void receiveMessage(SelectionKey key) {
     logger.info("Reading connection");
-    ByteBuffer byteBuffer = ByteBuffer.allocate(5);
+    ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
     SocketChannel s = (SocketChannel) key.channel();
-    int read = s.read(byteBuffer);
-    logger.info("Read : " + read);
-    if (read == -1) {
-      int port = ((InetSocketAddress) (s.getLocalAddress())).getPort();
-      if (port == brokersPort) {
-        brokers.remove(s);
+    try {
+      int read = s.read(byteBuffer);
+      logger.info("Read : " + read);
+      if (read == -1) {
+        int port = ((InetSocketAddress) (s.getLocalAddress())).getPort();
+        if (port == brokersPort) {
+          brokers.remove(s);
+        } else {
+          markets.remove(s);
+        }
+        s.close();
+        key.cancel();
       } else {
-        markets.remove(s);
+        MessageHandler messageHandler = new MessageHandler(new String(byteBuffer.array(), 0, read), s);
+        executorService.submit(messageHandler);
       }
-      s.close();
-      key.cancel();
-    } else {
-      logger.info(new String(byteBuffer.array()));
+    } catch (Exception e) {
+      logger.severe(MessageFormat.format("Error while receiving response : {0}", e.getMessage()));
     }
   }
 
@@ -113,11 +122,8 @@ public class Router implements Closeable {
     } else {
       brokers.add(s);
     }
-    logger.info("markets : " + markets.size());
-    logger.info("brokers : " + brokers.size());
-    //System.out.println(((InetSocketAddress)((ServerSocketChannel) key.channel()).getLocalAddress()).getPort());
     s.configureBlocking(false);
-    s.write(ByteBuffer.wrap(("Your id is " + ID.incrementAndGet() + "\n").getBytes()));
+    s.write(ByteBuffer.wrap(("" + ID.incrementAndGet()).getBytes()));
     s.register(selector, SelectionKey.OP_READ);
   }
 
@@ -127,8 +133,31 @@ public class Router implements Closeable {
 
   @Override
   public void close() throws IOException {
-    logger.info("Closing and cleaning server...");
+    logger.info("Cleaning and closing server...");
+    for (SocketChannel socketChannel : markets) {
+      socketChannel.close();
+    }
+    for (SocketChannel socketChannel : brokers) {
+      socketChannel.close();
+    }
     brokersChannel.close();
     marketsChannel.close();
+    executorService.shutdownNow();
+  }
+
+  class MessageHandler implements Runnable {
+    private final String message;
+    private final SocketChannel socketChannel;
+
+    public MessageHandler(String message, SocketChannel socketChannel) {
+      this.message = message;
+      this.socketChannel = socketChannel;
+    }
+    @Override
+    public void run() {
+      logger.info(Thread.currentThread().getName() + " got message: '" + message + "' from channel " + socketChannel);
+      MessageValidator messageValidator = new MessageValidator(null);
+      messageValidator.shouldPass(message);
+    }
   }
 }
