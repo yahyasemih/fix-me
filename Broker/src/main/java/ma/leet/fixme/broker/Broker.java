@@ -58,6 +58,9 @@ public class Broker implements AutoCloseable {
     stringBuilder.append(quantity);
     stringBuilder.append("\1");
     stringBuilder.append("5=");
+    stringBuilder.append(market);
+    stringBuilder.append("\1");
+    stringBuilder.append("6=");
     stringBuilder.append(price);
     stringBuilder.append("\1");
     int checksum = 0;
@@ -65,7 +68,7 @@ public class Broker implements AutoCloseable {
       checksum += stringBuilder.charAt(i);
       checksum %= 256;
     }
-    stringBuilder.append("6=");
+    stringBuilder.append("7=");
     stringBuilder.append(checksum);
     socket.getOutputStream().write(stringBuilder.toString().getBytes());
   }

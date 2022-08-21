@@ -12,9 +12,10 @@ import java.nio.channels.SocketChannel;
 import java.security.InvalidParameterException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,6 +43,8 @@ public class Router implements Closeable {
   private final AtomicBoolean isRunning;
   private final List<SocketChannel> brokers;
   private final List<SocketChannel> markets;
+  private final Map<Integer, SocketChannel> idToChannelMap;
+  private final Map<SocketChannel, Integer> channelToIdMap;
   private final int brokersPort;
   private final int marketsPort;
   private final ExecutorService executorService;
@@ -64,6 +67,8 @@ public class Router implements Closeable {
     isRunning = new AtomicBoolean(true);
     brokers = new ArrayList<>();
     markets = new ArrayList<>();
+    idToChannelMap = new HashMap<>();
+    channelToIdMap = new HashMap<>();
     executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
   }
 
@@ -91,21 +96,23 @@ public class Router implements Closeable {
   private void receiveMessage(SelectionKey key) {
     logger.info("Reading connection");
     ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
-    SocketChannel s = (SocketChannel) key.channel();
+    SocketChannel socketChannel = (SocketChannel) key.channel();
     try {
-      int read = s.read(byteBuffer);
+      int read = socketChannel.read(byteBuffer);
       logger.info("Read : " + read);
       if (read == -1) {
-        int port = ((InetSocketAddress) (s.getLocalAddress())).getPort();
+        int port = ((InetSocketAddress) (socketChannel.getLocalAddress())).getPort();
         if (port == brokersPort) {
-          brokers.remove(s);
+          brokers.remove(socketChannel);
         } else {
-          markets.remove(s);
+          markets.remove(socketChannel);
         }
-        s.close();
+        int id = channelToIdMap.get(socketChannel);
+        channelToIdMap.remove(socketChannel);
+        idToChannelMap.remove(id).close();
         key.cancel();
-      } else {
-        MessageHandler messageHandler = new MessageHandler(new String(byteBuffer.array(), 0, read), s);
+      } else if (read > 0) {
+        MessageHandler messageHandler = new MessageHandler(new String(byteBuffer.array(), 0, read), socketChannel);
         executorService.submit(messageHandler);
       }
     } catch (Exception e) {
@@ -124,6 +131,8 @@ public class Router implements Closeable {
     }
     s.configureBlocking(false);
     s.write(ByteBuffer.wrap(("" + ID.incrementAndGet()).getBytes()));
+    idToChannelMap.put(ID.get(), s);
+    channelToIdMap.put(s, ID.get());
     s.register(selector, SelectionKey.OP_READ);
   }
 
@@ -140,6 +149,10 @@ public class Router implements Closeable {
     for (SocketChannel socketChannel : brokers) {
       socketChannel.close();
     }
+    markets.clear();
+    brokers.clear();
+    idToChannelMap.clear();
+    channelToIdMap.clear();
     brokersChannel.close();
     marketsChannel.close();
     executorService.shutdownNow();
@@ -156,8 +169,11 @@ public class Router implements Closeable {
     @Override
     public void run() {
       logger.info(Thread.currentThread().getName() + " got message: '" + message + "' from channel " + socketChannel);
-      MessageValidator messageValidator = new MessageValidator(null);
-      messageValidator.shouldPass(message);
+      MessageProcessor messageProcessor = new MessageValidator(new IdentityChecker(new MessageForwarder(), idToChannelMap));
+      if (!messageProcessor.shouldPass(message)) {
+        return;
+      }
+      logger.info("Valid message");
     }
   }
 }

@@ -6,5 +6,5 @@ public abstract class MessageProcessor {
   MessageProcessor(MessageProcessor nextProcessor) {
     this.nextProcessor = nextProcessor;
   }
-  public abstract boolean shouldPass(String message);
+  public abstract boolean shouldPass(Object data);
 }
