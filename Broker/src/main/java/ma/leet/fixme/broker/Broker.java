@@ -1,9 +1,24 @@
 package ma.leet.fixme.broker;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 public class Broker implements AutoCloseable {
+  private static final LogManager logManager = LogManager.getLogManager();
+  private final static Logger logger = Logger.getLogger(Broker.class.getSimpleName());
+
+  static {
+    try {
+      logManager.readConfiguration(new FileInputStream("logger.properties"));
+    } catch (IOException exception) {
+      logger.log(Level.SEVERE, "Cannot read configuration file", exception);
+    }
+  }
+
   private final String id;
   private final Socket socket;
 
@@ -11,19 +26,16 @@ public class Broker implements AutoCloseable {
     socket = new Socket(host, port);
     byte[] byteBuffer = new byte[7];
     int read = socket.getInputStream().read(byteBuffer);
-    System.out.println("Read : " + read);
-    System.out.println(new String(byteBuffer, 0, read));
+    logger.log(Level.INFO, "Read : {0}", read);
+    logger.log(Level.INFO, new String(byteBuffer, 0, read));
     if (!isValidId(byteBuffer, read)) {
       long available = socket.getInputStream().available();
-      socket.getInputStream().skip(available);
+      long skipped = socket.getInputStream().skip(available);
+      logger.log(Level.INFO, "Skipping {0} bytes", skipped);
       socket.close();
       throw new IllegalArgumentException("Invalid broker ID");
     }
     this.id = new String(byteBuffer, 0, read);
-  }
-
-  public String getId() {
-    return id;
   }
 
   @Override

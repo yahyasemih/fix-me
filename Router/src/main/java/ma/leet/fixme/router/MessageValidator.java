@@ -1,6 +1,11 @@
 package ma.leet.fixme.router;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 import static java.lang.Integer.parseInt;
 
@@ -13,6 +18,17 @@ public class MessageValidator extends MessageProcessor {
   private static final String PRICE = "6";
   private static final String CHECKSUM = "7";
   private static final Set<String> validFields = Set.of(ID, TYPE, INSTRUMENT, QUANTITY, MARKET, PRICE, CHECKSUM);
+
+  private static final LogManager logManager = LogManager.getLogManager();
+  private final static Logger logger = Logger.getLogger(MessageValidator.class.getSimpleName());
+
+  static {
+    try {
+      logManager.readConfiguration(new FileInputStream("logger.properties"));
+    } catch (IOException exception) {
+      logger.log(Level.SEVERE, "Cannot read configuration file", exception);
+    }
+  }
 
   MessageValidator(MessageProcessor nextProcessor) {
     super(nextProcessor);
@@ -29,13 +45,13 @@ public class MessageValidator extends MessageProcessor {
     for (String s : fields) {
       String[] keyValue = s.split("=");
       if (keyValue.length != 2) {
-        System.out.println("Invalid field : " + s);
+        logger.log(Level.SEVERE, "Invalid field : {0}", s);
         return false;
       }
       String key = keyValue[0];
       String value = keyValue[1];
       if (!validFields.contains(key)) {
-        System.out.println("Invalid field : " + key);
+        logger.log(Level.SEVERE, "Invalid field : {0}", key);
         return false;
       }
       if (!key.equals(CHECKSUM)) {
@@ -48,11 +64,11 @@ public class MessageValidator extends MessageProcessor {
         try {
           int expectedChecksum = parseInt(value);
           if (expectedChecksum != checksum) {
-            System.out.println("Checksum incorrect : " + value);
+            logger.log(Level.SEVERE, "Checksum incorrect : {0}", value);
           }
           return expectedChecksum == checksum && nextProcessor.shouldPass(data);
         } catch (NumberFormatException e) {
-          System.out.println("Invalid checksum : " + value);
+          logger.log(Level.SEVERE, "Invalid checksum : {0}", value);
           return false;
         }
       }

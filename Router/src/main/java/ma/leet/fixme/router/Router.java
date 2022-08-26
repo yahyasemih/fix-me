@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 public class Router implements Closeable {
   private static final AtomicInteger ID = new AtomicInteger(99999);
   private static final LogManager logManager = LogManager.getLogManager();
-  private final static Logger logger = Logger.getLogger("ma/leet/fixme/router");
+  private final static Logger logger = Logger.getLogger(Router.class.getSimpleName());
 
   static {
     try {

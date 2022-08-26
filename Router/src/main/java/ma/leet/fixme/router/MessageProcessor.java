@@ -1,7 +1,7 @@
 package ma.leet.fixme.router;
 
 public abstract class MessageProcessor {
-  public MessageProcessor nextProcessor;
+  public final MessageProcessor nextProcessor;
 
   MessageProcessor(MessageProcessor nextProcessor) {
     this.nextProcessor = nextProcessor;
