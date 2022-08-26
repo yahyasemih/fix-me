@@ -11,7 +11,7 @@ public class Market {
     this.instruments = new ConcurrentHashMap<>(); // market is initially empty
   }
 
-  Instrument findInstrumentByName(String name) {
+  private Instrument findInstrumentByName(String name) {
     Optional<Instrument> instrument = instruments.entrySet().stream().filter(
         e -> e.getKey().getName().equals(name)).findAny().map(Map.Entry::getKey);
     if (instrument.isEmpty()) {
@@ -21,20 +21,23 @@ public class Market {
     }
   }
 
-  boolean instrumentExists(Instrument instrument) {
+  private boolean instrumentExists(Instrument instrument) {
     return instruments.containsKey(instrument);
   }
 
-  boolean instrumentExists(String name) {
+  private boolean instrumentExists(String name) {
     Instrument instrument = new Instrument(name, 0); // we don't care about the price
     return instrumentExists(instrument);
   }
 
-  boolean updateInstrumentPrice(Instrument instrument, int newPrice) {
+  private boolean updateInstrumentPrice(Instrument instrument, int newPrice) {
     if (!instrumentExists(instrument)) {
       return false;
     }
     instruments.put(instrument, newPrice);
     return true;
+  }
+
+  public void processMessage() {
   }
 }
