@@ -1,6 +1,5 @@
 package ma.leet.fixme.broker;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.logging.Level;
@@ -13,9 +12,9 @@ public class Broker implements AutoCloseable {
 
   static {
     try {
-      logManager.readConfiguration(new FileInputStream("logger.properties"));
+      logManager.readConfiguration(Broker.class.getClassLoader().getResourceAsStream("logger.properties"));
     } catch (IOException exception) {
-      logger.log(Level.SEVERE, "Cannot read configuration file", exception);
+      logger.log(Level.SEVERE, "Cannot read configuration file : {0}", exception.getMessage());
     }
   }
 

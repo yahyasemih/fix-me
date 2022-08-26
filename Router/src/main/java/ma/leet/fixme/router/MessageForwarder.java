@@ -1,6 +1,5 @@
 package ma.leet.fixme.router;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -14,9 +13,10 @@ public class MessageForwarder extends MessageProcessor {
 
   static {
     try {
-      logManager.readConfiguration(new FileInputStream("logger.properties"));
+      logManager.readConfiguration(
+          MessageForwarder.class.getClassLoader().getResourceAsStream("logger.properties"));
     } catch (IOException exception) {
-      logger.log(Level.SEVERE, "Cannot read configuration file", exception);
+      logger.log(Level.SEVERE, "Cannot read configuration file : {0}", exception.getMessage());
     }
   }
 

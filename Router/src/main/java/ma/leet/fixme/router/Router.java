@@ -1,7 +1,6 @@
 package ma.leet.fixme.router;
 
 import java.io.Closeable;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -10,7 +9,6 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.InvalidParameterException;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -31,9 +29,9 @@ public class Router implements Closeable {
 
   static {
     try {
-      logManager.readConfiguration(new FileInputStream("logger.properties"));
+      logManager.readConfiguration(Router.class.getClassLoader().getResourceAsStream("logger.properties"));
     } catch (IOException exception) {
-      logger.log(Level.SEVERE, "Cannot read configuration file", exception);
+      logger.log(Level.SEVERE, "Cannot read configuration file : {0}", exception.getMessage());
     }
   }
 
@@ -112,11 +110,12 @@ public class Router implements Closeable {
         idToChannelMap.remove(id).close();
         key.cancel();
       } else if (read > 0) {
-        MessageHandler messageHandler = new MessageHandler(new String(byteBuffer.array(), 0, read), socketChannel);
+        MessageHandler messageHandler = new MessageHandler(
+            new String(byteBuffer.array(), 0, read), socketChannel);
         executorService.submit(messageHandler);
       }
     } catch (Exception e) {
-      logger.severe(MessageFormat.format("Error while receiving response : {0}", e.getMessage()));
+      logger.log(Level.SEVERE, "Error while receiving response : {0}", e.getMessage());
     }
   }
 
@@ -168,12 +167,12 @@ public class Router implements Closeable {
     }
     @Override
     public void run() {
-      logger.info(Thread.currentThread().getName() + " got message: '" + message + "' from channel " + socketChannel);
+      logger.log(Level.INFO, "{0} got message: ''{1}'' from channel {2}",
+          new Object[] {Thread.currentThread().getName(), message, socketChannel});
       MessageProcessor messageProcessor = new MessageValidator(new IdentityChecker(new MessageForwarder(), idToChannelMap));
       if (!messageProcessor.shouldPass(message)) {
-        return;
+        logger.log(Level.INFO, "Message ''{0}'' could not be proceeded", message);
       }
-      logger.info("Valid message");
     }
   }
 }

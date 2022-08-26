@@ -1,6 +1,5 @@
 package ma.leet.fixme.router;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.Map;
@@ -16,9 +15,10 @@ public class IdentityChecker extends MessageProcessor {
 
   static {
     try {
-      logManager.readConfiguration(new FileInputStream("logger.properties"));
+      logManager.readConfiguration(
+          IdentityChecker.class.getClassLoader().getResourceAsStream("logger.properties"));
     } catch (IOException exception) {
-      logger.log(Level.SEVERE, "Cannot read configuration file ", exception);
+      logger.log(Level.SEVERE, "Cannot read configuration file : {0}", exception.getMessage());
     }
   }
 
