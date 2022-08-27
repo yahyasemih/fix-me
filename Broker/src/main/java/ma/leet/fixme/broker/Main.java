@@ -68,7 +68,7 @@ public class Main {
         }
       }
     } catch (Exception e) {
-      System.out.println("Error while trading : " + e);
+      System.out.println("Error while trading : " + e.getMessage());
     }
   }
 }

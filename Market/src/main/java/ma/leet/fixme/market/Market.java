@@ -39,6 +39,7 @@ public class Market implements AutoCloseable {
       throw new IllegalArgumentException("Invalid market ID");
     }
     this.id = new String(byteBuffer, 0, read);
+    logger.log(Level.INFO, "Assigned id ''{0}'' by router", id);
     this.instruments = new ConcurrentHashMap<>(); // market is initially empty
   }
 

@@ -33,6 +33,7 @@ public class Broker implements AutoCloseable {
       throw new IllegalArgumentException("Invalid broker ID");
     }
     this.id = new String(byteBuffer, 0, read);
+    logger.log(Level.INFO, "Assigned id ''{0}'' by router", id);
   }
 
   @Override
@@ -83,9 +84,17 @@ public class Broker implements AutoCloseable {
   }
 
   private void sendToMarket(String message) throws Exception {
+    if (!socket.isConnected() || socket.isOutputShutdown()) {
+      logger.log(Level.SEVERE, "Router connection is closed");
+      return;
+    }
     socket.getOutputStream().write(message.getBytes());
     logger.log(Level.INFO, "Waiting for market response...");
     byte[] buffer = new byte[1024];
+    if (!socket.isConnected() || socket.isInputShutdown()) {
+      logger.log(Level.SEVERE, "Router connection is closed");
+      return;
+    }
     int read = socket.getInputStream().read(buffer);
     if (read < 0) {
       logger.log(Level.SEVERE, "Could not read market's response");
