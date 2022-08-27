@@ -13,10 +13,12 @@ public class MessageValidator extends MessageProcessor {
   private static final String TYPE = "2";
   private static final String INSTRUMENT = "3";
   private static final String QUANTITY = "4";
-  private static final String MARKET = "5";
+  private static final String DESTINATION = "5";
   private static final String PRICE = "6";
-  private static final String CHECKSUM = "7";
-  private static final Set<String> validFields = Set.of(ID, TYPE, INSTRUMENT, QUANTITY, MARKET, PRICE, CHECKSUM);
+  private static final String RESULT = "7";
+  private static final String CHECKSUM = "8";
+  private static final Set<String> validFields = Set.of(
+      ID, TYPE, INSTRUMENT, QUANTITY, DESTINATION, PRICE, RESULT, CHECKSUM);
 
   private static final LogManager logManager = LogManager.getLogManager();
   private final static Logger logger = Logger.getLogger(MessageValidator.class.getSimpleName());

@@ -25,8 +25,6 @@ public class Broker implements AutoCloseable {
     socket = new Socket(host, port);
     byte[] byteBuffer = new byte[7];
     int read = socket.getInputStream().read(byteBuffer);
-    logger.log(Level.INFO, "Read : {0}", read);
-    logger.log(Level.INFO, new String(byteBuffer, 0, read));
     if (!isValidId(byteBuffer, read)) {
       long available = socket.getInputStream().available();
       long skipped = socket.getInputStream().skip(available);
@@ -79,8 +77,50 @@ public class Broker implements AutoCloseable {
       checksum += stringBuilder.charAt(i);
       checksum %= 256;
     }
-    stringBuilder.append("7=");
+    stringBuilder.append("8=");
     stringBuilder.append(checksum);
-    socket.getOutputStream().write(stringBuilder.toString().getBytes());
+    sendToMarket(stringBuilder.toString());
+  }
+
+  private void sendToMarket(String message) throws Exception {
+    socket.getOutputStream().write(message.getBytes());
+    logger.log(Level.INFO, "Waiting for market response...");
+    byte[] buffer = new byte[1024];
+    int read = socket.getInputStream().read(buffer);
+    if (read < 0) {
+      logger.log(Level.SEVERE, "Could not read market's response");
+      return;
+    }
+    logger.log(Level.INFO, "received ''{0}''", new String(buffer, 0, read - 1));
+  }
+
+  public void sell(String instrument, int quantity, String market, int price) throws Exception {
+    StringBuilder stringBuilder = new StringBuilder();
+    stringBuilder.append("1=");
+    stringBuilder.append(id);
+    stringBuilder.append("\1");
+    stringBuilder.append("2=");
+    stringBuilder.append("SELL");
+    stringBuilder.append("\1");
+    stringBuilder.append("3=");
+    stringBuilder.append(instrument);
+    stringBuilder.append("\1");
+    stringBuilder.append("4=");
+    stringBuilder.append(quantity);
+    stringBuilder.append("\1");
+    stringBuilder.append("5=");
+    stringBuilder.append(market);
+    stringBuilder.append("\1");
+    stringBuilder.append("6=");
+    stringBuilder.append(price);
+    stringBuilder.append("\1");
+    int checksum = 0;
+    for (int i = 0; i < stringBuilder.length(); ++i) {
+      checksum += stringBuilder.charAt(i);
+      checksum %= 256;
+    }
+    stringBuilder.append("8=");
+    stringBuilder.append(checksum);
+    sendToMarket(stringBuilder.toString());
   }
 }

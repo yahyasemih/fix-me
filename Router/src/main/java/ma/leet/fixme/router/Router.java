@@ -97,7 +97,6 @@ public class Router implements Closeable {
     SocketChannel socketChannel = (SocketChannel) key.channel();
     try {
       int read = socketChannel.read(byteBuffer);
-      logger.info("Read : " + read);
       if (read == -1) {
         int port = ((InetSocketAddress) (socketChannel.getLocalAddress())).getPort();
         if (port == brokersPort) {
@@ -109,6 +108,7 @@ public class Router implements Closeable {
         channelToIdMap.remove(socketChannel);
         idToChannelMap.remove(id).close();
         key.cancel();
+        logger.info("closed connection");
       } else if (read > 0) {
         MessageHandler messageHandler = new MessageHandler(
             new String(byteBuffer.array(), 0, read), socketChannel);
