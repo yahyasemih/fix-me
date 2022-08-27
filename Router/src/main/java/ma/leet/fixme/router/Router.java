@@ -172,6 +172,11 @@ public class Router implements Closeable {
       MessageProcessor messageProcessor = new MessageValidator(new IdentityChecker(new MessageForwarder(), idToChannelMap));
       if (!messageProcessor.shouldPass(message)) {
         logger.log(Level.INFO, "Message ''{0}'' could not be proceeded", message);
+        try {
+          socketChannel.write(ByteBuffer.wrap("Invalid request\n".getBytes()));
+        } catch (IOException e) {
+          logger.log(Level.SEVERE, "Could not write to channel {0}", socketChannel);
+        }
       }
     }
   }
