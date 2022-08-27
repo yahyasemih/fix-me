@@ -62,19 +62,18 @@ public class Market implements AutoCloseable {
   }
 
   private void addInstrument(Instrument instrument, int quantity) {
-    logger.log(Level.INFO, "Adding {0} item of instrument {1}", new Object[]{quantity, instrument.getName()});
-    instruments.put(instrument, instruments.getOrDefault(instrument, 0) + quantity);
-  }
-
-  private boolean updateInstrumentPrice(Instrument instrument, int price) {
-    instrument.setPrice(price);
-    if (!instrumentExists(instrument)) {
-      logger.log(Level.INFO, "Instrument {0} does not exist", instrument.getName());
-      return false;
+    int oldQuantity = instruments.getOrDefault(instrument, 0);
+    if (instrumentExists(instrument)) {
+      Instrument existingInstrument = findInstrumentByName(instrument.getName());
+      assert existingInstrument != null;
+      int newPrice = existingInstrument.getPrice() * oldQuantity;
+      newPrice += quantity * instrument.getPrice();
+      newPrice /= quantity + oldQuantity;
+      instrument.setPrice(newPrice);
     }
-    logger.log(Level.INFO, "Updating instrument {0} with price {1}", new Object[]{instrument.getName(), price});
-    instruments.put(instrument, instruments.get(instrument));
-    return true;
+    logger.log(Level.INFO, "Adding {0} item of instrument {1} with price {2}",
+        new Object[]{quantity, instrument.getName(), instrument.getPrice()});
+    instruments.put(instrument, oldQuantity + quantity);
   }
 
   public void processMessage(String message) throws Exception {
